@@ -22,7 +22,7 @@ A hands-on, Docker-based cybersecurity lab environment for the HackCraft worksho
 
 ```bash
 # 1. Clone this repository
-git clone <repo-url>
+git clone git@github.com:AlenJoseph/hackcraft-workshop.git
 cd hackcraft-workshop
 
 # 2. Start the lab environment (first run downloads ~3 GB of images)
