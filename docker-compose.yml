@@ -1,0 +1,69 @@
+# ============================================================
+# HackCraft Workshop - Cybersecurity Lab Environment
+# Usage: docker compose up -d
+# ============================================================
+
+services:
+  # ── Attacker Box ──────────────────────────────────────────
+  kali:
+    build:
+      context: ./kali
+      dockerfile: Dockerfile
+    container_name: kali
+    hostname: kali
+    stdin_open: true
+    tty: true
+    networks:
+      hackcraft-net:
+        ipv4_address: 10.10.10.10
+    depends_on:
+      dvwa:
+        condition: service_started
+      ctf-server:
+        condition: service_started
+      metasploitable:
+        condition: service_started
+
+  # ── DVWA - Damn Vulnerable Web Application ────────────────
+  dvwa:
+    image: vulnerables/web-dvwa
+    container_name: dvwa
+    hostname: dvwa
+    restart: unless-stopped
+    networks:
+      hackcraft-net:
+        ipv4_address: 10.10.10.20
+
+  # ── Metasploitable 2 ─────────────────────────────────────
+  metasploitable:
+    image: tleemcjr/metasploitable2
+    container_name: metasploitable
+    hostname: metasploitable
+    tty: true
+    stdin_open: true
+    restart: unless-stopped
+    networks:
+      hackcraft-net:
+        ipv4_address: 10.10.10.30
+
+  # ── Custom CTF Server ────────────────────────────────────
+  ctf-server:
+    build:
+      context: ./ctf-server
+      dockerfile: Dockerfile
+    container_name: ctf-server
+    hostname: ctf-server
+    restart: unless-stopped
+    networks:
+      hackcraft-net:
+        ipv4_address: 10.10.10.40
+    environment:
+      - FLAG_ENV=HACKCRAFT{environment_variables_leak_secrets}
+
+networks:
+  hackcraft-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.10.10.0/24
+          gateway: 10.10.10.1

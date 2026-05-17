@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackCraft CTF Server</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Courier New', monospace;
+            background: #0a0a0a;
+            color: #00ff41;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 700px;
+            padding: 40px;
+            border: 1px solid #00ff41;
+            border-radius: 8px;
+            text-align: center;
+        }
+        h1 { font-size: 2.5em; margin-bottom: 10px; }
+        .subtitle { color: #00cc33; margin-bottom: 30px; font-size: 1.1em; }
+        .info {
+            text-align: left;
+            background: #111;
+            padding: 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+            line-height: 1.8;
+        }
+        .info code { color: #ffcc00; }
+        a { color: #00ff41; text-decoration: underline; }
+        .hint { color: #666; font-size: 0.85em; margin-top: 20px; }
+        .ascii-art { font-size: 0.7em; color: #004400; margin-bottom: 20px; white-space: pre; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <pre class="ascii-art">
+    ██╗  ██╗ █████╗  ██████╗██╗  ██╗
+    ██║  ██║██╔══██╗██╔════╝██║ ██╔╝
+    ███████║███████║██║     █████╔╝
+    ██╔══██║██╔══██║██║     ██╔═██╗
+    ██║  ██║██║  ██║╚██████╗██║  ██╗
+    ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝
+     ██████╗██████╗  █████╗ ███████╗████████╗
+    ██╔════╝██╔══██╗██╔══██╗██╔════╝╚══██╔══╝
+    ██║     ██████╔╝███████║█████╗     ██║
+    ██║     ██╔══██╗██╔══██║██╔══╝     ██║
+    ╚██████╗██║  ██║██║  ██║██║        ██║
+     ╚═════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝        ╚═╝
+        </pre>
+
+        <h1>CTF Challenge Server</h1>
+        <p class="subtitle">5 flags are hidden across this environment. Can you find them all?</p>
+
+        <div class="info">
+            <p><strong>Flag Format:</strong> <code>HACKCRAFT{...}</code></p>
+            <br>
+            <p><strong>Challenges:</strong></p>
+            <p>🔍 Flag 1 — Sometimes the server tells you more than it should...</p>
+            <p>📂 Flag 2 — Not everything on a web server is linked from the homepage.</p>
+            <p>💉 Flag 3 — <a href="/login.php">This login form</a> might have a weakness.</p>
+            <p>🔑 Flag 4 — There's a user on this machine. Can you guess their password?</p>
+            <p>💀 Flag 5 — The vulnerable machine on 10.10.10.30 has a secret too.</p>
+        </div>
+
+        <p class="hint">Hint: Use the tools on your Kali machine. Think like a hacker.</p>
+    </div>
+</body>
+</html>
