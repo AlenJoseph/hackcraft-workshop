@@ -30,6 +30,8 @@ services:
     container_name: dvwa
     hostname: dvwa
     restart: unless-stopped
+    ports:
+      - "8080:80"
     networks:
       hackcraft-net:
         ipv4_address: 10.10.10.20
@@ -54,6 +56,9 @@ services:
     container_name: ctf-server
     hostname: ctf-server
     restart: unless-stopped
+    ports:
+      - "8888:80"
+      - "2222:22"
     networks:
       hackcraft-net:
         ipv4_address: 10.10.10.40
