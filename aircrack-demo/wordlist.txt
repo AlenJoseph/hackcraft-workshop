@@ -1,5 +1,6 @@
 password
 123456
+12345678
 password123
 admin
 letmein
@@ -19,3 +20,4 @@ batman
 access
 hello
 demo_wifi_pass
+biscotte
